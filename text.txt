@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Project Sync - Workspace Hub</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --ig-gradient: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+            --bg-light: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-dark: #262626;
+            --text-muted: #8e8e8e;
+            --border-color: #dbdbdb;
+            --duo-green: #2cd673;
+            --primary-blue: #0095f6;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg-light); color: var(--text-dark); display: flex; height: 100vh; overflow: hidden; position: relative; }
+
+        /* ONBOARDING MODAL OVERLAY (SCROLLABLE FIX) */
+        .onboarding-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            overflow-y: auto;
+            padding: 20px 0;
+        }
+
+        .onboarding-card {
+            background: #ffffff;
+            width: 90%;
+            max-width: 440px;
+            padding: 28px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin: auto;
+        }
+
+        .onboarding-card h2 {
+            font-size: 1.4rem;
+            background: var(--ig-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .input-group { display: flex; flex-direction: column; gap: 6px; }
+        .input-group label { font-size: 0.8rem; font-weight: 700; color: #475569; }
+        .input-group input, .input-group textarea {
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
+            font-size: 0.85rem;
+            outline: none;
+        }
+
+        .btn-primary {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        /* Sidebar Navigation */
+        aside {
+            width: 300px;
+            background: var(--card-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .logo {
+            font-size: 1.3rem;
+            font-weight: 700;
+            background: var(--ig-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .share-link-btn {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .sidebar-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 10px;
+        }
+
+        .member-list { display: flex; flex-direction: column; gap: 10px; }
+        .member-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f8f9fa;
+            padding: 8px 10px;
+            border-radius: 12px;
+            border: 1px solid #efeef1;
+        }
+
+        .member-left { display: flex; align-items: center; gap: 10px; }
+        .story-ring { padding: 2px; background: var(--ig-gradient); border-radius: 50%; display: flex; }
+        .avatar {
+            width: 32px; height: 32px; border-radius: 50%; background: #fff; border: 2px solid #fff;
+            display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.75rem;
+        }
+
+        .custom-role-badge {
+            font-size: 0.65rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; color: white;
+            background: #ab47bc; display: inline-block; margin-top: 2px; cursor: pointer;
+        }
+        .admin-badge { background: #e74a3b; }
+
+        .remove-btn { color: #ed4956; background: none; border: none; cursor: pointer; font-size: 0.8rem; }
+
+        /* Main Workspace Content */
+        main { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+        
+        .header-box {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .progress-container { width: 200px; }
+        .progress-bar-bg { width: 100%; height: 12px; background: #eef2f5; border-radius: 6px; overflow: hidden; margin-top: 6px; }
+        .progress-bar-fill { width: 0%; height: 100%; background: var(--duo-green); transition: width 0.4s ease; }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 16px; padding: 18px; }
+        .card-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+
+        /* STATUS NOTES BAR WITH MANUAL DELETE BUTTON */
+        .ig-notes-bar { display: flex; gap: 12px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 6px; }
+        .note-item { display: flex; flex-direction: column; align-items: center; min-width: 70px; text-align: center; position: relative; }
+        .note-bubble { 
+            background: #f0f2f5; 
+            border-radius: 12px; 
+            padding: 4px 18px 4px 8px; 
+            font-size: 0.65rem; 
+            margin-bottom: 4px; 
+            border: 1px solid #e4e6eb; 
+            position: relative;
+            word-break: break-word;
+        }
+        .delete-note-btn {
+            position: absolute;
+            top: 2px;
+            right: 4px;
+            background: none;
+            border: none;
+            color: #ed4956;
+            font-size: 0.75rem;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .task-input { display: flex; gap: 8px; margin-bottom: 12px; }
+        .task-input input { flex: 1; padding: 8px 12px; border-radius: 20px; border: 1px solid var(--border-color); outline: none; font-size: 0.8rem; }
+        .task-input button { padding: 8px 14px; background: var(--text-dark); color: white; border: none; border-radius: 20px; font-weight: 600; cursor: pointer; }
+        .task-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #efefef; font-size: 0.85rem; }
+
+        /* SPLIT WORKSPACE */
+        .split-workspace {
+            display: grid;
+            grid-template-columns: 2.2fr 1fr;
+            gap: 20px;
+        }
+
+        .whiteboard-box {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .live-iframe-viewport {
+            width: 100%;
+            height: 480px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            background: #fafafa;
+        }
+
+        .live-iframe-viewport iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .resource-sidebar-hub {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+            max-height: 440px;
+        }
+
+        .file-item-card {
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.8rem;
+        }
+
+        .empty-state {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 20px 10px;
+        }
+
+        /* Floating Chat Widget */
+        .chat-widget-btn {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 50px;
+            height: 50px;
+            background: var(--ig-gradient);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            cursor: pointer;
+            z-index: 1000;
+        }
+
+        .chat-window {
+            position: fixed;
+            bottom: 80px;
+            left: 20px;
+            width: 320px;
+            height: 400px;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            display: none;
+            flex-direction: column;
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .chat-header { background: #f8f9fa; border-bottom: 1px solid var(--border-color); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; }
+        .chat-tabs { display: flex; background: #eef2f5; padding: 4px; border-bottom: 1px solid var(--border-color); }
+        .chat-tab { flex: 1; text-align: center; padding: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer; border-radius: 6px; color: var(--text-muted); }
+        .chat-tab.active { background: white; color: var(--text-dark); }
+        
+        .chat-messages { flex: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; font-size: 0.8rem; }
+        .chat-msg { background: #f1f3f4; padding: 6px 10px; border-radius: 10px; max-width: 85%; width: fit-content; }
+        .chat-msg.mine { background: #e3f2fd; align-self: flex-end; }
+        .chat-footer { padding: 8px; border-top: 1px solid var(--border-color); display: flex; gap: 6px; }
+        .chat-footer input { flex: 1; padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 16px; font-size: 0.8rem; }
+        .chat-footer button { background: var(--primary-blue); color: white; border: none; padding: 6px 12px; border-radius: 16px; cursor: pointer; }
+
+        .dm-user-item { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; cursor: pointer; }
+        .dm-user-item:hover { background: #f0f2f5; }
+        .inline-form { display: none; background: #f1f3f4; padding: 10px; border-radius: 8px; margin-bottom: 10px; flex-direction: column; gap: 6px; }
+    </style>
+</head>
+<body>
+
+    <!-- INITIAL ONBOARDING MODAL -->
+    <div class="onboarding-overlay" id="onboardingScreen">
+        <!-- CREATE SERVER FLOW -->
+        <div class="onboarding-card" id="createFlow">
+            <h2><i class="fa-solid fa-arrows-spin"></i> Create Space</h2>
+            <p style="font-size: 0.8rem; color: #64748b;">Set up a new workspace for your team.</p>
+            
+            <div class="input-group">
+                <label>Your Name</label>
+                <input type="text" id="adminNameInput" placeholder="e.g. Jane Doe">
+            </div>
+
+            <div class="input-group">
+                <label>Space Name</label>
+                <input type="text" id="serverNameInput" placeholder="e.g. Group A">
+            </div>
+
+            <div class="input-group">
+                <label>Description</label>
+                <textarea id="serverBioInput" rows="2" placeholder="What is your team working on?"></textarea>
+            </div>
+
+            <button class="btn-primary" onclick="initWorkspace('create')">Continue & Create Space</button>
+        </div>
+
+        <!-- JOIN SERVER FLOW -->
+        <div class="onboarding-card" id="joinFlow" style="display:none;">
+            <h2><i class="fa-solid fa-users"></i> Join Space</h2>
+            <div style="background:#f1f5f9; padding:10px; border-radius:10px; font-size:0.85rem;" id="serverInviteInfo"></div>
+
+            <div class="input-group">
+                <label>Your Name</label>
+                <input type="text" id="joinerNameInput" placeholder="Enter your full name...">
+            </div>
+
+            <div class="input-group">
+                <label>Your Role / Bio</label>
+                <input type="text" id="joinerRoleInput" placeholder="e.g. Designer, Researcher...">
+            </div>
+
+            <button class="btn-primary" onclick="initWorkspace('join')">Join Space Workspace</button>
+        </div>
+    </div>
+
+    <!-- Sidebar Navigation -->
+    <aside>
+        <div class="logo"><i class="fa-solid fa-arrows-spin"></i> Project Sync</div>
+        <button class="share-link-btn" onclick="copySpaceLink()"><i class="fa-solid fa-link"></i> Copy Space Share Link</button>
+        <div id="copyAlert" style="font-size:0.72rem; color:var(--duo-green); display:none; text-align:center; font-weight:600;">Shareable Link Copied!</div>
+
+        <div>
+            <div class="sidebar-title">Team Members</div>
+            <div class="member-list" id="memberList"></div>
+        </div>
+
+        <div>
+            <div class="sidebar-title">Contribution Tracker</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">
+                Active Hub Time: <strong id="timer" style="color:var(--text-dark);">00:00:00</strong>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main>
+        <header class="header-box">
+            <div>
+                <h2 id="displayServerTitle" style="font-size: 1.1rem; font-weight: 700;">Workspace</h2>
+                <p id="displayServerBio" style="font-size: 0.8rem; color: var(--text-muted);">Collaborative Workspace Dashboard</p>
+            </div>
+            <div class="progress-container">
+                <div style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:600;">
+                    <span>Milestone Progress</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressBarFill"></div></div>
+            </div>
+        </header>
+
+        <div class="grid">
+            <section class="card">
+                <div class="card-title"><i class="fa-regular fa-comment-dots"></i> Team Status Notes</div>
+                <div class="ig-notes-bar" id="notesBar"></div>
+                <div class="task-input">
+                    <input type="text" id="noteInp" placeholder="Share a status note...">
+                    <button onclick="addNote()">Post</button>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="card-title"><i class="fa-solid fa-square-check"></i> Task List</div>
+                <div class="task-input">
+                    <input type="text" id="taskInp" placeholder="Add new task...">
+                    <button onclick="addTask()">Add</button>
+                </div>
+                <div id="taskList"></div>
+            </section>
+        </div>
+
+        <!-- SPLIT SECTION: WHITEBOARD & FILE HUB -->
+        <div class="split-workspace">
+            <section class="whiteboard-box">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="card-title" style="margin-bottom:0;"><i class="fa-solid fa-palette"></i> Whiteboard</div>
+                    <span style="font-size:0.72rem; color:var(--text-muted);"><i class="fa-solid fa-magnifying-glass-plus"></i> Pinch / Ctrl+Scroll to zoom canvas</span>
+                </div>
+                <div class="live-iframe-viewport">
+                    <iframe src="https://excalidraw.com" title="Live Collaborative Whiteboard Canvas"></iframe>
+                </div>
+            </section>
+
+            <section class="resource-sidebar-hub">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="card-title" style="margin-bottom:0;"><i class="fa-solid fa-folder-open"></i> File & Link Hub</div>
+                    <button onclick="toggleForm('fileForm')" style="background:var(--primary-blue); color:white; border:none; padding:4px 8px; border-radius:8px; font-size:0.72rem; font-weight:600; cursor:pointer;">+ Add File</button>
+                </div>
+
+                <div class="inline-form" id="fileForm">
+                    <input type="text" id="fileNameInp" placeholder="File Title (e.g. Project Proposal)..." style="padding:6px; font-size:0.75rem; border-radius:4px; border:1px solid #ccc;">
+                    <input type="text" id="fileUrlInp" placeholder="File Link (https://...)..." style="padding:6px; font-size:0.75rem; border-radius:4px; border:1px solid #ccc;">
+                    <button onclick="addFileLink()" style="background:var(--primary-blue); color:white; border:none; padding:6px; border-radius:4px; font-size:0.75rem; cursor:pointer; font-weight:bold;">Attach File Link</button>
+                </div>
+
+                <div class="file-list" id="fileHubList">
+                    <div class="empty-state" id="emptyFileMsg">No shared files added yet. Tap <strong>+ Add File</strong> to link documents!</div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Floating Chatroom -->
+    <div class="chat-widget-btn" onclick="toggleChat()"><i class="fa-solid fa-comments"></i></div>
+
+    <div class="chat-window" id="chatWin">
+        <div class="chat-header">
+            <div style="font-weight:700; font-size:0.85rem;" id="chatTitle"><i class="fa-solid fa-comments"></i> Team Chat Hub</div>
+            <button onclick="toggleChat()" style="background:none; border:none; font-size:1rem; cursor:pointer;">&times;</button>
+        </div>
+        <div class="chat-tabs">
+            <div class="chat-tab active" id="gTab" onclick="switchTab('group')"># Group Chat</div>
+            <div class="chat-tab" id="pTab" onclick="switchTab('private')">🔒 Private DMs</div>
+        </div>
+        <div class="chat-messages" id="gMsg">
+            <div class="chat-msg"><em>Workspace channel initialized.</em></div>
+        </div>
+        <div class="chat-messages" id="pMsg" style="display:none;">
+            <div style="font-size:0.7rem; color:var(--text-muted); margin-bottom:4px;">Select member to message:</div>
+            <div id="dmUserList"></div>
+        </div>
+        <div class="chat-messages" id="activeDMMsg" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #efefef; padding-bottom:4px;">
+                <strong id="dmTargetName" style="color:var(--primary-blue); font-size:0.8rem;">DM</strong>
+                <button onclick="backToDMList()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.7rem;">&larr; Back to list</button>
+            </div>
+            <div class="chat-msg"><em>Private conversation started.</em></div>
+        </div>
+        <div class="chat-footer">
+            <input type="text" id="chatInp" placeholder="Type message...">
+            <button onclick="sendMsg()"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <script>
+        // WEB AUDIO API SOUND SYNTHESIZER
+        let audioCtx = null;
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        function playSound(type) {
+            try {
+                const ctx = getAudioContext();
+                const now = ctx.currentTime;
+
+                if (type === 'status_note') {
+                    // Soft bubble pop
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.exponentialRampToValueAtTime(880, now + 0.12);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.12);
+
+                } else if (type === 'task_add') {
+                    // Metallic click chime
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(587.33, now);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+
+                } else if (type === 'file_add') {
+                    // Upward dual-tone sweep
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, now);
+                    osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.18);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.18);
+
+                } else if (type === 'task_check') {
+                    // Mid completion chime
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(659.25, now);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+
+                } else if (type === 'milestone_complete') {
+                    // Grand C-Major Victory Fanfare
+                    const notes = [523.25, 659.25, 783.99, 1046.50];
+                    notes.forEach((freq, idx) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        const noteTime = now + (idx * 0.09);
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, noteTime);
+                        gain.gain.setValueAtTime(0.25, noteTime);
+                        gain.gain.exponentialRampToValueAtTime(0.01, noteTime + 0.35);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(noteTime);
+                        osc.stop(noteTime + 0.35);
+                    });
+
+                } else if (type === 'chat_msg') {
+                    // Crisp double message pop
+                    [0, 0.08].forEach((delay, idx) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        const msgTime = now + delay;
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(800 + (idx * 200), msgTime);
+                        osc.frequency.exponentialRampToValueAtTime(400, msgTime + 0.06);
+                        gain.gain.setValueAtTime(0.18, msgTime);
+                        gain.gain.exponentialRampToValueAtTime(0.01, msgTime + 0.06);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(msgTime);
+                        osc.stop(msgTime + 0.06);
+                    });
+                }
+            } catch (e) {
+                console.warn('Audio playback error', e);
+            }
+        }
+
+        let serverData = { name: '', bio: '', admin: '' };
+        let currentUser = { name: '', role: '', isAdmin: false };
+        let members = [];
+        let statusNotes = [];
+        let totalTasks = 0;
+        let completedTasks = 0;
+
+        window.addEventListener('load', () => {
+            const hash = window.location.hash.substring(1);
+            if (hash.includes('server=')) {
+                const params = new URLSearchParams(hash);
+                serverData.name = decodeURIComponent(params.get('server') || '');
+                serverData.admin = decodeURIComponent(params.get('admin') || '');
+                
+                document.getElementById('createFlow').style.display = 'none';
+                document.getElementById('joinFlow').style.display = 'flex';
+                document.getElementById('serverInviteInfo').innerHTML = `
+                    <strong>${serverData.name}</strong><br>
+                    <span style="color:#64748b;">Created by ${serverData.admin}</span>
+                `;
+            }
+
+            setInterval(checkExpiredNotes, 10000);
+        });
+
+        function initWorkspace(mode) {
+            getAudioContext();
+
+            if (mode === 'create') {
+                const adminName = document.getElementById('adminNameInput').value.trim();
+                const serverName = document.getElementById('serverNameInput').value.trim();
+                const serverBio = document.getElementById('serverBioInput').value.trim();
+
+                if (!adminName || !serverName) {
+                    alert('Please enter your name and space name!');
+                    return;
+                }
+
+                serverData = { name: serverName, bio: serverBio || 'Team Project Workspace', admin: adminName };
+                currentUser = { name: adminName, role: 'Space Admin', isAdmin: true };
+            } else {
+                const joinerName = document.getElementById('joinerNameInput').value.trim();
+                const joinerRole = document.getElementById('joinerRoleInput').value.trim();
+
+                if (!joinerName) {
+                    alert('Please enter your name to join!');
+                    return;
+                }
+
+                currentUser = { name: joinerName, role: joinerRole || 'Member', isAdmin: false };
+                
+                if (serverData.admin) {
+                    addMemberToList(serverData.admin, 'Space Admin', true);
+                }
+            }
+
+            document.getElementById('onboardingScreen').style.display = 'none';
+
+            document.getElementById('displayServerTitle').innerText = serverData.name;
+            document.getElementById('displayServerBio').innerText = serverData.bio;
+
+            addMemberToList(currentUser.name, currentUser.role, currentUser.isAdmin);
+
+            window.location.hash = `server=${encodeURIComponent(serverData.name)}&admin=${encodeURIComponent(serverData.admin)}`;
+            playSound('task_add');
+        }
+
+        function addMemberToList(name, role, isAdmin) {
+            const initials = name.substring(0,2).toUpperCase();
+            const id = 'mem-' + Date.now() + Math.random().toString(36).substr(2,4);
+            
+            members.push({ name, role, isAdmin });
+
+            const card = document.createElement('div');
+            card.className = 'member-card';
+            card.id = id;
+            card.innerHTML = `
+                <div class="member-left">
+                    <div class="story-ring"><div class="avatar">${initials}</div></div>
+                    <div>
+                        <div style="font-size: 0.85rem; font-weight:700;">${name}</div>
+                        <span class="custom-role-badge ${isAdmin ? 'admin-badge' : ''}" onclick="editRole(this)">${role}</span>
+                    </div>
+                </div>
+                ${!isAdmin ? `<button class="remove-btn" onclick="removeEl('${id}')"><i class="fa-solid fa-user-minus"></i></button>` : ''}
+            `;
+            document.getElementById('memberList').appendChild(card);
+            renderDMUserList();
+        }
+
+        function copySpaceLink() {
+            const shareUrl = `${window.location.origin}${window.location.pathname}#server=${encodeURIComponent(serverData.name)}&admin=${encodeURIComponent(serverData.admin)}`;
+            navigator.clipboard.writeText(shareUrl);
+            
+            const alertBox = document.getElementById('copyAlert');
+            alertBox.style.display = 'block';
+            setTimeout(() => alertBox.style.display = 'none', 3000);
+            playSound('task_add');
+        }
+
+        function editRole(badgeEl) {
+            const newRole = prompt("Enter custom role tag for this member:");
+            if (newRole && newRole.trim() !== "") badgeEl.innerText = newRole.trim();
+        }
+
+        function removeEl(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        function toggleForm(id) {
+            const el = document.getElementById(id);
+            el.style.display = el.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function addFileLink() {
+            const nameInp = document.getElementById('fileNameInp');
+            const urlInp = document.getElementById('fileUrlInp');
+            if (nameInp.value.trim() !== "") {
+                const emptyMsg = document.getElementById('emptyFileMsg');
+                if (emptyMsg) emptyMsg.remove();
+
+                const list = document.getElementById('fileHubList');
+                const card = document.createElement('div');
+                card.className = 'file-item-card';
+                card.innerHTML = `
+                    <div>
+                        <i class="fa-solid fa-link" style="color:#2563eb; margin-right:6px;"></i>
+                        <strong>${nameInp.value.trim()}</strong>
+                    </div>
+                    <a href="${urlInp.value.trim() || '#'}" target="_blank" style="color:var(--primary-blue); font-size:0.7rem; font-weight:bold; text-decoration:none;">Open</a>
+                `;
+                list.appendChild(card);
+                nameInp.value = '';
+                urlInp.value = '';
+                toggleForm('fileForm');
+                playSound('file_add');
+            }
+        }
+
+        function addTask() {
+            const inp = document.getElementById('taskInp');
+            if (inp.value.trim() !== '') {
+                totalTasks++;
+                const div = document.createElement('div');
+                div.className = 'task-row';
+                div.innerHTML = `<input type="checkbox" onchange="updateProgress(this)"> <span>${inp.value}</span>`;
+                document.getElementById('taskList').appendChild(div);
+                inp.value = '';
+                calculateProgress();
+                playSound('task_add');
+            }
+        }
+
+        function updateProgress(cb) {
+            if (cb.checked) {
+                completedTasks++;
+                playSound('task_check');
+            } else {
+                completedTasks--;
+            }
+            calculateProgress();
+        }
+
+        function calculateProgress() {
+            if (totalTasks === 0) return;
+            const pct = Math.round((completedTasks / totalTasks) * 100);
+            document.getElementById('progressPercent').innerText = `${pct}%`;
+            document.getElementById('progressBarFill').style.width = `${pct}%`;
+
+            if (pct === 100 && completedTasks > 0) {
+                playSound('milestone_complete');
+            }
+        }
+
+        function addNote() {
+            const inp = document.getElementById('noteInp');
+            if (inp.value.trim() !== '') {
+                const initials = currentUser.name ? currentUser.name.substring(0,2).toUpperCase() : 'ME';
+                const noteId = 'note-' + Date.now();
+                const createdAt = Date.now();
+
+                const item = document.createElement('div');
+                item.className = 'note-item';
+                item.id = noteId;
+                item.setAttribute('data-timestamp', createdAt);
+                item.innerHTML = `
+                    <div class="note-bubble">
+                        ${inp.value}
+                        <button class="delete-note-btn" onclick="deleteNote('${noteId}')" title="Delete note">&times;</button>
+                    </div>
+                    <div class="story-ring"><div class="avatar">${initials}</div></div>
+                `;
+                
+                document.getElementById('notesBar').insertBefore(item, document.getElementById('notesBar').firstChild);
+                statusNotes.push({ id: noteId, timestamp: createdAt });
+                inp.value = '';
+                playSound('status_note');
+            }
+        }
+
+        function deleteNote(id) {
+            const noteEl = document.getElementById(id);
+            if (noteEl) {
+                noteEl.remove();
+                statusNotes = statusNotes.filter(n => n.id !== id);
+            }
+        }
+
+        function checkExpiredNotes() {
+            const now = Date.now();
+            const twentyFourHoursMs = 24 * 60 * 60 * 1000;
+
+            statusNotes.forEach(note => {
+                if (now - note.timestamp >= twentyFourHoursMs) {
+                    deleteNote(note.id);
+                }
+            });
+        }
+
+        let activeTab = 'group';
+        let currentDMUser = null;
+
+        function toggleChat() {
+            const win = document.getElementById('chatWin');
+            win.style.display = win.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function switchTab(t) {
+            activeTab = t;
+            document.getElementById('gTab').classList.toggle('active', t === 'group');
+            document.getElementById('pTab').classList.toggle('active', t === 'private');
+            
+            if (t === 'group') {
+                document.getElementById('gMsg').style.display = 'flex';
+                document.getElementById('pMsg').style.display = 'none';
+                document.getElementById('activeDMMsg').style.display = 'none';
+                currentDMUser = null;
+            } else {
+                document.getElementById('gMsg').style.display = 'none';
+                document.getElementById('pMsg').style.display = 'flex';
+                document.getElementById('activeDMMsg').style.display = 'none';
+            }
+        }
+
+        function renderDMUserList() {
+            const box = document.getElementById('dmUserList');
+            box.innerHTML = '';
+            members.forEach(m => {
+                if (m.name !== currentUser.name) {
+                    const initials = m.name.substring(0,2).toUpperCase();
+                    const item = document.createElement('div');
+                    item.className = 'dm-user-item';
+                    item.onclick = () => openDM(m.name);
+                    item.innerHTML = `
+                        <div class="story-ring"><div class="avatar">${initials}</div></div>
+                        <div><div style="font-weight:bold; font-size:0.8rem;">${m.name}</div><div style="font-size:0.68rem; color:var(--duo-green);">${m.role}</div></div>
+                    `;
+                    box.appendChild(item);
+                }
+            });
+        }
+
+        function openDM(userName) {
+            currentDMUser = userName;
+            document.getElementById('pMsg').style.display = 'none';
+            document.getElementById('activeDMMsg').style.display = 'flex';
+            document.getElementById('dmTargetName').innerText = 'DM with ' + userName;
+        }
+
+        function backToDMList() {
+            currentDMUser = null;
+            document.getElementById('activeDMMsg').style.display = 'none';
+            document.getElementById('pMsg').style.display = 'flex';
+        }
+
+        function sendMsg() {
+            const inp = document.getElementById('chatInp');
+            if (inp.value.trim() !== '') {
+                const msg = document.createElement('div');
+                msg.className = 'chat-msg mine';
+                msg.innerHTML = `<strong>You:</strong> ${inp.value}`;
+                let targetBox = (activeTab === 'group') ? document.getElementById('gMsg') : (currentDMUser ? document.getElementById('activeDMMsg') : document.getElementById('pMsg'));
+                targetBox.appendChild(msg);
+                targetBox.scrollTop = targetBox.scrollHeight;
+                inp.value = '';
+                playSound('chat_msg');
+            }
+        }
+
+        let t = 0;
+        setInterval(() => {
+            t++;
+            let h = String(Math.floor(t / 3600)).padStart(2, '0');
+            let m = String(Math.floor((t % 3600) / 60)).padStart(2, '0');
+            let s = String(t % 60).padStart(2, '0');
+            document.getElementById('timer').innerText = `${h}:${m}:${s}`;
+        }, 1000);
+    </script>
+</body>
+</html>
